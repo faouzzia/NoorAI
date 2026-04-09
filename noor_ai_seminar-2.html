@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Noor AI — IIP Seminar</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #fdfdfd; color: #1a1c1c; min-height: 100vh; display: flex; justify-content: center; }
+  :root {
+    --gold: #8c5002;
+    --gold-light: #dc9145;
+    --gold-bg: #faf3e0;
+    --muted: #524438;
+    --border: rgba(140,80,2,0.15);
+    --bg-secondary: #f5f5f3;
+  }
+  .app { width: 100%; max-width: 640px; display: flex; flex-direction: column; min-height: 100vh; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+
+  /* API Key banner */
+  .api-banner { background: #fffbeb; border-bottom: 1px solid #fde68a; padding: 10px 1.5rem; display: flex; align-items: center; gap: 10px; }
+  .api-banner label { font-size: 12px; font-weight: 600; color: #92400e; white-space: nowrap; }
+  .api-banner input { flex: 1; font-size: 12px; font-family: monospace; padding: 5px 10px; border: 1px solid #fcd34d; border-radius: 6px; background: white; color: #1a1c1c; outline: none; }
+  .api-banner input:focus { border-color: var(--gold-light); box-shadow: 0 0 0 2px rgba(220,145,69,0.15); }
+  .api-status { font-size: 11px; white-space: nowrap; font-weight: 600; }
+  .api-status.ok { color: #15803d; }
+  .api-status.missing { color: #b45309; }
+
+  /* Header */
+  .header { padding: 1.25rem 1.5rem 1rem; border-bottom: 1px solid var(--border); background: white; }
+  .header-top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .noor-badge { width: 36px; height: 36px; border-radius: 50%; background: var(--gold-bg); border: 2px solid var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .header h1 { font-size: 17px; font-weight: 600; color: var(--gold); }
+  .header p { font-size: 13px; color: var(--muted); margin-left: 46px; }
+  .live-dot { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 3px 9px; margin-left: auto; flex-shrink: 0; }
+  .live-dot::before { content: ''; width: 6px; height: 6px; background: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+  /* Messages */
+  .messages { padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; flex: 1; overflow-y: auto; }
+  .msg-row { display: flex; gap: 10px; align-items: flex-end; }
+  .msg-row.from-user { flex-direction: row-reverse; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+  .avatar.user-av { background: var(--bg-secondary); border: 1px solid #ddd; color: var(--muted); }
+  .avatar.noor-av { background: var(--gold-bg); border: 2px solid var(--gold-light); }
+  .avatar.speaker-av { background: var(--gold); color: white; font-size: 11px; }
+  .bubble { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.65; }
+  .bubble.user-bubble { background: var(--bg-secondary); border: 1px solid #e0ddd8; color: #1a1c1c; border-bottom-right-radius: 4px; }
+  .bubble.noor-bubble { background: var(--gold-bg); border: 1px solid rgba(140,80,2,0.2); color: #1a1c1c; border-bottom-left-radius: 4px; }
+  .bubble.speaker-bubble { background: var(--gold); color: #fff5e6; border-bottom-left-radius: 4px; font-style: italic; }
+  .bubble-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 5px; opacity: 0.7; }
+  .noor-label { color: var(--gold); }
+  .speaker-label { color: rgba(255,245,230,0.85); }
+  .typing { display: flex; gap: 5px; align-items: center; min-height: 22px; }
+  .typing span { width: 7px; height: 7px; background: var(--gold-light); border-radius: 50%; animation: bounce 1s infinite; }
+  .typing span:nth-child(2){animation-delay:.15s}
+  .typing span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}}
+
+  /* Input area */
+  .input-area { padding: 1rem 1.5rem 1.25rem; border-top: 1px solid var(--border); background: white; }
+  .mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; align-items: center; }
+  .mode-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .mode-btn { font-size: 12px; padding: 5px 13px; border-radius: 20px; border: 1px solid #ddd; background: var(--bg-secondary); color: var(--muted); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+  .mode-btn.active { background: var(--gold); border-color: var(--gold); color: white; }
+  .input-row { display: flex; gap: 8px; align-items: flex-end; }
+  textarea { flex: 1; resize: none; border: 1px solid #ddd; border-radius: 10px; padding: 10px 13px; font-size: 14px; font-family: inherit; line-height: 1.5; background: var(--bg-secondary); color: #1a1c1c; outline: none; min-height: 44px; max-height: 110px; transition: border-color 0.15s; }
+  textarea:focus { border-color: var(--gold-light); box-shadow: 0 0 0 3px rgba(220,145,69,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .send-btn { width: 44px; height: 44px; border-radius: 10px; background: var(--gold); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+  .send-btn:hover { background: var(--gold-light); }
+  .send-btn:active { transform: scale(0.95); }
+  .hint { font-size: 11px; color: #aaa; margin-top: 6px; }
+  .error-box { background: #fff1f1; border: 1px solid #fca5a5; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #b91c1c; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- API Key invoer -->
+  <div class="api-banner">
+    <label for="apikey">🔑 API-sleutel:</label>
+    <input type="password" id="apikey" placeholder="sk-ant-api03-..." oninput="updateStatus()" autocomplete="off"/>
+    <span class="api-status missing" id="api-status">Vul sleutel in</span>
+  </div>
+
+  <div class="header">
+    <div class="header-top">
+      <div class="noor-badge">✦</div>
+      <h1>Noor AI — IIP Seminar</h1>
+      <div class="live-dot">Live</div>
+    </div>
+    <p>Stel je vraag over het seminar "Wie ben ik?" of de Aqiedah lessen</p>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="msg-row">
+      <div class="avatar noor-av">✦</div>
+      <div>
+        <div class="bubble noor-bubble">
+          <div class="bubble-label noor-label">Noor AI</div>
+          As-salamu alaykum wa rahmatullahi wa barakatuh! Welkom bij het IIP Seminar "Wie ben ik?" Ik ben Noor AI, gevoed met de lesinhoud van de Aqiedah lessen. Vul eerst je API-sleutel in bovenaan, daarna kun je vragen stellen.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="mode-toggle">
+      <span class="mode-label">Antwoord van:</span>
+      <button class="mode-btn active" id="btn-noor" onclick="setMode('noor')">✦ Noor AI</button>
+      <button class="mode-btn" id="btn-speaker" onclick="setMode('speaker')">🎙 Live Spreker</button>
+    </div>
+    <div class="input-row">
+      <textarea id="qinput" placeholder="Schrijf hier je vraag..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" onclick="sendQuestion()" title="Verstuur">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div class="hint" id="mode-hint">Noor AI beantwoordt op basis van de IIP lesinhoud</div>
+  </div>
+</div>
+
+<script>
+const LESSON_CONTEXT = `Je bent Noor AI, de kennisassistent voor het IIP Seminar "Wie ben ik?" voor jonge moslima's. Je bent gevoed met de volgende lesinhoud van de Aqiedah lessen:
+
+SEMINAR THEMA - WIE BEN IK:
+- Het seminar heeft als doel jonge moslima's te onderwijzen vanuit de Islam, aan het denken te zetten over identiteit, keuzes, invloeden & prioriteiten, en te inspireren meer verbonden te raken met Allah.
+- Identiteit begint niet bij uiterlijk of sociale media, maar bij wat je gelooft - je Aqiedah is het fundament.
+- Uitspraak Ibn al-Qayyim: "Weet dat de dienaar de reis naar Allah aflegt met zijn hart, niet met zijn lichaam."
+- Allah zegt (Soerat Adh-dhaariyaat 51:56): "Ik heb de djinn en de mens slechts geschapen om Mij alleen te aanbidden."
+- Een sterke moslimidentiteit begint niet bij regels maar bij liefde - voor Allah, voor de Profeet (vzmh), voor het geloof.
+
+LES 1 - DE SHAHADA (GELOOFSGETUIGENIS):
+- Twee delen: 1) Laa ilaaha illa Allaah, 2) Mohammadan Rasoeloellaah
+- De overtuiging moet niet alleen in het hart zijn maar ook worden uitgesproken met de tong.
+- Mohammed (vzmh) is de laatste Profeet, gestuurd naar alle mensen en Djinn.
+- Profeet is uniek: alle voorgaande profeten waren naar specifieke volken gestuurd.
+- De Koran is een blijvend wonder en uitdaging - niemand kan iets gelijkwaardigs voortbrengen.
+
+LES 2 - SHIRK (VEELGODENDOM):
+- Shirk = een ander gelijkstellen aan Allah wat betreft zaken die slechts Hem toebehoren.
+- Grote Shirk: plaatst de pleger buiten het geloof (offeren voor anderen, smeekbeden aan andere dan Allah).
+- Kleine Shirk: bijv. zweren bij een ander dan Allah, of zeggen "Wat Allah wil én wat jij wilt."
+- De Profeet (vzmh) corrigeerde direct: "Zeg niet 'Als Allah en u willen', maar zeg 'Als Allah alleen wil'."
+
+LES 3 - VORMEN VAN SHIRK:
+- Shirk in smeekbeden, intentie, gehoorzamen, en liefde.
+- Als moslims moeten we niet alleen het wereldse nastreven maar de tevredenheid van Allah.
+
+LES 4 - KLEINE SHIRK & HYPOCRITEN:
+- Hypocrieten komen alleen naar gebeden om gezien te worden.
+- Tekenen hypocriet: als hij spreekt liegt hij, belofte doet hij niet na, bij toevertrouwen schaadt hij.
+- Ahmadiyya-beweging: beweert dat er na Profeet nog een profeet is gekomen - geleerden zijn duidelijk dat dit niet klopt.
+
+LES 5 - HET GEVAAR VAN SHIRK:
+- Allah vergeeft geen shirk als iemand sterft zonder berouw (Surah An-Nisaa 48).
+- Maar wie tawbah (berouw) toont, Allah vergeeft.
+
+LES 6 - ZAKEN DIE DE ISLAM VERBREKEN:
+- Shirk in de ibaadah van Allah.
+- Tussenpartij nemen tussen jou en Allah (bijv. naar een graf gaan voor hulp).
+- Spot drijven met Allah of de Profeet.
+- Sihr (magie) bewust beoefenen en ermee tevreden zijn.
+
+LES 7 - KOEFR (ONGELOOF):
+- Twee soorten: grote Koefr (treedt buiten geloof) en kleine Koefr (grote zonde, maar blijft moslim).
+- Vijf categorieën grote Koefr: verloochening, hoogmoed, twijfel, afkeer, nifaaq.
+
+LES 8 - NIFAAQ (HYPOCRISIE) & DRIE FUNDAMENTEN:
+- Nifaaq akbar (in overtuiging) en Nifaaq asghar (in daden).
+- Drie fundamenten (= drie vragen in het graf): Kennis over Allah, kennis over het geloof, kennis over de Profeet.
+- Islam = onderwerping aan Allah, oprechtheid voor Allah, volgzaamheid jegens Allah.
+
+LES 9 - ZUILEN VAN IMAAN:
+- 3e zuil: geloof in Boeken (Quran, Injil, Zabur, Tawrat).
+- 4e zuil: geloof in Boodschappers.
+- 5e zuil: geloof in de Laatste Dag (Ba3th, verrekening, Paradijs/Hellevuur).
+- 6e zuil: geloof in al-Qadr (Voorbeschikking) - vier aspecten.
+
+INSTRUCTIES VOOR NOOR AI:
+- Antwoord als een ondersteunende, warme digitale zuster.
+- Gebruik relevante Koranverzen en overleveringen uit de lesinhoud waar van toepassing.
+- Houd antwoorden beknopt maar inhoudelijk (max 150 woorden).
+- Spreek de vraagsteller aan als "zuster" of gebruik haar naam indien gegeven.
+- Eindig met een bemoedigend woord of du'a waar passend.
+- Antwoord in het Nederlands.
+- Gebruik islamitische begroetingen en uitdrukkingen zoals gepast (vzmh, swt, etc).`;
+
+let currentMode = 'noor';
+let isLoading = false;
+
+function getApiKey() {
+  return document.getElementById('apikey').value.trim();
+}
+
+function updateStatus() {
+  const key = getApiKey();
+  const el = document.getElementById('api-status');
+  if (key.startsWith('sk-ant-')) {
+    el.textContent = '✓ Sleutel ingevuld';
+    el.className = 'api-status ok';
+  } else if (key.length > 0) {
+    el.textContent = 'Ongeldige sleutel';
+    el.className = 'api-status missing';
+  } else {
+    el.textContent = 'Vul sleutel in';
+    el.className = 'api-status missing';
+  }
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btn-noor').classList.toggle('active', mode === 'noor');
+  document.getElementById('btn-speaker').classList.toggle('active', mode === 'speaker');
+  document.getElementById('mode-hint').textContent = mode === 'noor'
+    ? 'Noor AI beantwoordt op basis van de IIP lesinhoud'
+    : 'Het antwoord verschijnt als een Live Spreker reactie';
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 110) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendQuestion(); }
+}
+
+function addMessage(content, type, label) {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (type === 'user' ? ' from-user' : '');
+  const avatarClass = type === 'user' ? 'user-av' : type === 'noor' ? 'noor-av' : 'speaker-av';
+  const avatarContent = type === 'user' ? '◦' : type === 'noor' ? '✦' : 'S';
+  const bubbleClass = type === 'user' ? 'user-bubble' : type === 'noor' ? 'noor-bubble' : 'speaker-bubble';
+  const labelClass = type === 'noor' ? 'noor-label' : 'speaker-label';
+  const labelHtml = label ? `<div class="bubble-label ${labelClass}">${label}</div>` : '';
+  row.innerHTML = `<div class="avatar ${avatarClass}">${avatarContent}</div><div><div class="bubble ${bubbleClass}">${labelHtml}${content}</div></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return row;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  const av = currentMode === 'noor' ? '✦' : 'S';
+  const avClass = currentMode === 'noor' ? 'noor-av' : 'speaker-av';
+  const bClass = currentMode === 'noor' ? 'noor-bubble' : 'speaker-bubble';
+  row.innerHTML = `<div class="avatar ${avClass}">${av}</div><div><div class="bubble ${bClass} typing"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return row;
+}
+
+async function sendQuestion() {
+  if (isLoading) return;
+  const apiKey = getApiKey();
+  if (!apiKey.startsWith('sk-ant-')) {
+    alert('Vul eerst een geldige Anthropic API-sleutel in bovenaan de pagina.');
+    return;
+  }
+  const input = document.getElementById('qinput');
+  const question = input.value.trim();
+  if (!question) return;
+  input.value = ''; input.style.height = 'auto';
+  isLoading = true;
+  addMessage(question, 'user');
+  const mode = currentMode;
+  const typingEl = addTyping();
+  try {
+    const systemPrompt = mode === 'speaker'
+      ? `Je bent een live spreker op het IIP Seminar "Wie ben ik?". Je geeft een kort, inspirerend live antwoord op de vraag van een deelnemer. Gebruik de kennis uit de lessen: ${LESSON_CONTEXT}. Antwoord in het Nederlands, persoonlijk en warm, maximaal 80 woorden. Begin met een islamitische uitdrukking. Gebruik poëtisch taalgebruik passend bij een live lezing.`
+      : LESSON_CONTEXT;
+    const userMsg = mode === 'speaker'
+      ? `Een deelnemer stelt tijdens het seminar deze vraag: "${question}". Geef een kort live antwoord als spreker.`
+      : question;
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMsg }]
+      })
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.content?.map(b => b.text || '').join('') || 'Er is een fout opgetreden.';
+    typingEl.remove();
+    addMessage(text, mode, mode === 'noor' ? '✦ Noor AI' : '🎙 Live Spreker');
+  } catch(e) {
+    typingEl.remove();
+    const errRow = document.createElement('div');
+    errRow.className = 'msg-row';
+    errRow.innerHTML = `<div class="avatar noor-av">✦</div><div><div class="error-box">Fout: ${e.message || 'Onbekende fout. Controleer je API-sleutel.'}</div></div>`;
+    document.getElementById('messages').appendChild(errRow);
+  }
+  isLoading = false;
+}
+</script>
+</body>
+</html>
